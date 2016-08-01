@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -97,6 +98,8 @@ func readTestTemplates(t testing.TB) (raw, expected map[string]string, err error
 	return
 }
 
+var ignoreWhitespace = regexp.MustCompile(`[\r\n\t]+`)
+
 func TestSuite(t *testing.T) {
 	data, err := readTestData()
 	if err != nil {
@@ -146,22 +149,22 @@ func TestSuite(t *testing.T) {
 
 		tmpl, err = tmpl.New(key).Parse(src)
 		if err != nil {
-			t.Errorf("%q: %v", key, err)
+			t.Errorf("%q: %v\nsource: %q", key, err, src)
 			continue
 		}
 
 		buf.Reset()
 		err = tmpl.Execute(&buf, data)
 		if err != nil {
-			t.Errorf("%q: %v", key, err)
+			t.Errorf("%q: %v\nsource: %q", key, err, src)
 			continue
 		}
 
-		parsed := strings.Replace(buf.String(), "\r\n", "\n", -1)
-		expect := strings.Replace(expected[key], "\r\n", "\n", -1)
+		parsed := ignoreWhitespace.ReplaceAllLiteralString(buf.String(), "")
+		expect := ignoreWhitespace.ReplaceAllLiteralString(expected[key], "")
 
 		if parsed != expect {
-			t.Errorf("%q: result did not match:\nexpected: %q\nactual:   %q", key, expect, parsed)
+			t.Errorf("%q: result did not match:\nexpected: %q\nactual:   %q\nsource: %q", key, expect, parsed, src)
 		}
 	}
 }
